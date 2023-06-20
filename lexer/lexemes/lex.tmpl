@@ -1,0 +1,57 @@
+// Code generated DO NOT EDIT
+
+package {{ .Package }}
+
+import "fmt"
+
+const (
+	ClassNone TokenClass = iota
+
+	{{ range .TokClasses }}{{ . }}
+    {{ end }}
+)
+
+const (
+	EOF TokenName = iota
+
+	{{ range .TokNames }}{{ . }}
+    {{ end }}
+)
+
+var reservedWordsToTokenMeta = map[string]TokenMeta{
+    {{ range .ConstLexemes }} "{{.Lexeme}}": { {{.TokenClass}}, {{.TokenName}} },
+    {{ end }}
+}
+
+var tokenNamesToTokenMeta = map[TokenName]TokenMeta{
+    {{ range .ConstLexemes }} {{.TokenName}}: { {{.TokenClass}}, {{.TokenName}} },
+    {{ end }}
+    {{ range .VarLexemes }} {{.TokenName}}: { {{.TokenClass}}, {{.TokenName}} },
+    {{ end }}
+}
+
+
+func (t *Token) String() string {
+
+    {{ range .ConstLexemes }}
+
+        if {{.TokenName}} == t.Name {
+            return "{{.TokenName}}"
+        }
+
+    {{ end }}
+
+    {{ range .VarLexemes }}
+
+        if {{.TokenName}} == t.Name {
+            return fmt.Sprintf("%s (%s)", "{{.TokenName}}", t.Value)
+        }
+
+    {{ end }}
+
+
+    panic("bad")
+}
+
+
+
