@@ -1,0 +1,13 @@
+expr : term ((PLUS | MINUS) term)*
+
+term : pow ((MULT | DIV) pow)*
+
+pow : factor (POW factor)*
+
+factor : PLUS factor
+        | MINUS factor
+        | NUMBER
+        | CONST
+        | VAR
+        | LPAREN expr RPAREN
+        | FUNCTION LPAREN expr RPAREN
