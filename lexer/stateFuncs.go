@@ -101,7 +101,7 @@ func lexKeywordOrId(l *Lexer) stateFn {
 
 	tok, ok := reservedWordsToTokenMeta[l.currWord()]
 	if !ok { // got variable
-		if l.pos-l.start > 1 {
+		if l.pos-l.start > 1 || l.pos-l.start == 0 {
 			l.fail()
 			return nil
 		}

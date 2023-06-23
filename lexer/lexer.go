@@ -23,7 +23,7 @@ type Token struct {
 	Column int
 }
 
-//go:generate go run lexemes/genLex.go lexemes/lexemes.go -tmpl lexemes/lex.tmpl -o generatedLexemes.go
+//go:generate go run lexemes/genLexData.go lexemes/lexemes.go -tmpl lexemes/lex.tmpl -o generatedLexemes.go
 
 type Lexer struct {
 	input string
@@ -33,7 +33,7 @@ type Lexer struct {
 	width int // width in bytes of last rune
 
 	tokens []Token
-	err    *LexError
+	err    error
 
 	currRow    int
 	currColumn int
@@ -42,7 +42,6 @@ type Lexer struct {
 func (l *Lexer) next() (r rune) {
 
 	if l.pos >= len(l.input) {
-		l.width = 0
 		return 0
 	}
 
@@ -64,34 +63,33 @@ func (l *Lexer) backup() {
 	l.pos -= l.width
 }
 
-func (l *Lexer) peek() rune {
-	r := l.next()
-	l.backup()
-
-	return r
-}
-
 type acceptFn func(r rune) bool
 
-func (l *Lexer) accept(fn acceptFn) bool {
-	if fn(l.next()) {
-		return true
-	}
-	l.backup()
-	return false
-}
-
 func (l *Lexer) acceptRun(fn acceptFn) {
-	for fn(l.next()) {
+	var r rune
+
+	for {
+		r = l.next()
+		if !fn(r) {
+			break
+		}
 	}
-	l.backup()
+
+	if r != 0 {
+		l.backup()
+	}
 }
 
 func (l *Lexer) acceptSet(valid string) bool {
-	if strings.ContainsRune(valid, l.next()) {
+	r := l.next()
+
+	if strings.ContainsRune(valid, r) {
 		return true
 	}
-	l.backup()
+
+	if r != 0 {
+		l.backup()
+	}
 	return false
 }
 
@@ -123,6 +121,9 @@ func (l *Lexer) Run() ([]Token, error) {
 	for state := lexFunction; state != nil; {
 		state = state(l)
 	}
+
+	l.tokens = append(l.tokens, Token{
+		TokenMeta: TokenMeta{ClassNone, EOF}})
 
 	return l.tokens, l.err
 }

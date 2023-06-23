@@ -28,6 +28,8 @@ var tokenNamesToTokenMeta = map[TokenName]TokenMeta{
     {{ end }}
     {{ range .VarLexemes }} {{.TokenName}}: { {{.TokenClass}}, {{.TokenName}} },
     {{ end }}
+
+    EOF: {ClassNone, EOF},
 }
 
 
@@ -44,10 +46,14 @@ func (t *Token) String() string {
     {{ range .VarLexemes }}
 
         if {{.TokenName}} == t.Name {
-            return fmt.Sprintf("%s (%s)", "{{.TokenName}}", t.Value)
+            return fmt.Sprintf("%s(%s)", "{{.TokenName}}", t.Value)
         }
 
     {{ end }}
+
+    if EOF == t.Name {
+            return "EOF"
+    }
 
 
     panic("bad")

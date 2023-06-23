@@ -13,7 +13,7 @@ func TestLexer(t *testing.T) {
 
 		input string
 		toks  []Token
-		err   *LexError
+		err   error
 	}{
 		{
 			name:  "correct input",
@@ -91,6 +91,9 @@ func TestLexer(t *testing.T) {
 					Row:       1,
 					Column:    22,
 				},
+				{
+					TokenMeta: TokenMeta{ClassNone, EOF},
+				},
 			},
 			err: nil,
 		},
@@ -109,6 +112,9 @@ func TestLexer(t *testing.T) {
 					Value:     "/",
 					Row:       1,
 					Column:    4,
+				},
+				{
+					TokenMeta: TokenMeta{ClassNone, EOF},
 				},
 			},
 			err: &LexError{

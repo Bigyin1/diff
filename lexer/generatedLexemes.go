@@ -7,12 +7,12 @@ import "fmt"
 const (
 	ClassNone TokenClass = iota
 
+	ClassFunction
 	ClassOperator
 	ClassConst
 	ClassParen
 	ClassNumber
 	ClassVariable
-	ClassFunction
 )
 
 const (
@@ -71,6 +71,8 @@ var tokenNamesToTokenMeta = map[TokenName]TokenMeta{
 
 	Number:   {ClassNumber, Number},
 	Variable: {ClassVariable, Variable},
+
+	EOF: {ClassNone, EOF},
 }
 
 func (t *Token) String() string {
@@ -132,11 +134,15 @@ func (t *Token) String() string {
 	}
 
 	if Number == t.Name {
-		return fmt.Sprintf("%s (%s)", "Number", t.Value)
+		return fmt.Sprintf("%s(%s)", "Number", t.Value)
 	}
 
 	if Variable == t.Name {
-		return fmt.Sprintf("%s (%s)", "Variable", t.Value)
+		return fmt.Sprintf("%s(%s)", "Variable", t.Value)
+	}
+
+	if EOF == t.Name {
+		return "EOF"
 	}
 
 	panic("bad")
