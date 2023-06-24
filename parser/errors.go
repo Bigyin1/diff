@@ -18,7 +18,7 @@ func (e *UnexpTokenError) Error() string {
 
 	if e.exp != lexer.EOF {
 		return fmt.Sprintf("unexpected token %s at %d, %d; wanted %s",
-			e.tok.String(), e.tok.Row, e.tok.Column, expTok.String())
+			e.tok.Name, e.tok.Row, e.tok.Column, expTok.Name)
 	}
 
 	if e.tok.Name == lexer.EOF {
@@ -26,5 +26,5 @@ func (e *UnexpTokenError) Error() string {
 	}
 
 	return fmt.Sprintf("unexpected token %s at %d, %d",
-		e.tok.String(), e.tok.Row, e.tok.Column)
+		e.tok.Name, e.tok.Row, e.tok.Column)
 }

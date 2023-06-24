@@ -70,7 +70,7 @@ func (p *Parser) expr() Node {
 
 		p.eatToken(op.Name)
 
-		node = &BinOpNode{Op: op, Left: node, Right: p.term()}
+		node = &BinOpNode{Op: op.Name, Left: node, Right: p.term()}
 	}
 
 	return node
@@ -84,7 +84,7 @@ func (p *Parser) term() Node {
 
 		p.eatToken(op.Name)
 
-		node = &BinOpNode{Op: op, Left: node, Right: p.pow()}
+		node = &BinOpNode{Op: op.Name, Left: node, Right: p.pow()}
 	}
 
 	return node
@@ -98,7 +98,7 @@ func (p *Parser) pow() Node {
 
 		p.eatToken(op.Name)
 
-		node = &BinOpNode{Op: op, Left: node, Right: p.factor()}
+		node = &BinOpNode{Op: op.Name, Left: node, Right: p.factor()}
 	}
 
 	return node
@@ -111,7 +111,7 @@ func (p *Parser) factor() Node {
 		op := p.getCurrToken()
 		p.eatToken(op.Name)
 
-		return &UnOpNode{Op: op, Expr: p.factor()}
+		return &UnOpNode{Op: op.Name, Expr: p.factor()}
 	}
 
 	if p.currTokenHasClass(lexer.ClassConst,
@@ -120,7 +120,7 @@ func (p *Parser) factor() Node {
 		v := p.getCurrToken()
 		p.eatToken(v.Name)
 
-		return &ValNode{Val: v}
+		return &ValNode{Type: v.Name, Val: v.Value}
 	}
 
 	if p.currTokenHasName(lexer.LParen) {
@@ -138,7 +138,7 @@ func (p *Parser) factor() Node {
 		p.eatToken(fn.Name)
 		p.eatToken(lexer.LParen)
 
-		node := &UnOpNode{Op: fn, Expr: p.expr()}
+		node := &UnOpNode{Op: fn.Name, Expr: p.expr()}
 
 		p.eatToken(lexer.RParen)
 		return node
@@ -156,7 +156,6 @@ func NewParser(toks []lexer.Token) *Parser {
 }
 
 func (p *Parser) Run() (Node, error) {
-	root := p.expr()
 
-	return root, p.err
+	return &DerivNode{Func: p.expr()}, p.err
 }

@@ -2,17 +2,15 @@
 
 package lexer
 
-import "fmt"
-
 const (
 	ClassNone TokenClass = iota
 
-	ClassFunction
 	ClassOperator
 	ClassConst
 	ClassParen
 	ClassNumber
 	ClassVariable
+	ClassFunction
 )
 
 const (
@@ -75,73 +73,73 @@ var tokenNamesToTokenMeta = map[TokenName]TokenMeta{
 	EOF: {ClassNone, EOF},
 }
 
-func (t *Token) String() string {
+func (t TokenName) String() string {
 
-	if Sin == t.Name {
+	if Sin == t {
 		return "Sin"
 	}
 
-	if Cos == t.Name {
+	if Cos == t {
 		return "Cos"
 	}
 
-	if Tg == t.Name {
+	if Tg == t {
 		return "Tg"
 	}
 
-	if Ctg == t.Name {
+	if Ctg == t {
 		return "Ctg"
 	}
 
-	if Ln == t.Name {
+	if Ln == t {
 		return "Ln"
 	}
 
-	if Plus == t.Name {
+	if Plus == t {
 		return "Plus"
 	}
 
-	if Minus == t.Name {
+	if Minus == t {
 		return "Minus"
 	}
 
-	if Mult == t.Name {
+	if Mult == t {
 		return "Mult"
 	}
 
-	if Div == t.Name {
+	if Div == t {
 		return "Div"
 	}
 
-	if Pow == t.Name {
+	if Pow == t {
 		return "Pow"
 	}
 
-	if Euler == t.Name {
+	if Euler == t {
 		return "Euler"
 	}
 
-	if Pi == t.Name {
+	if Pi == t {
 		return "Pi"
 	}
 
-	if LParen == t.Name {
+	if LParen == t {
 		return "LParen"
 	}
 
-	if RParen == t.Name {
+	if RParen == t {
 		return "RParen"
 	}
 
-	if Number == t.Name {
-		return fmt.Sprintf("%s(%s)", "Number", t.Value)
+	if Number == t {
+		return "Number"
 	}
 
-	if Variable == t.Name {
-		return fmt.Sprintf("%s(%s)", "Variable", t.Value)
+	if Variable == t {
+		return "Variable"
 	}
 
-	if EOF == t.Name {
+	if EOF == t {
 		return "EOF"
 	}
 

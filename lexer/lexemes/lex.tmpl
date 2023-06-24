@@ -2,7 +2,6 @@
 
 package {{ .Package }}
 
-import "fmt"
 
 const (
 	ClassNone TokenClass = iota
@@ -33,11 +32,11 @@ var tokenNamesToTokenMeta = map[TokenName]TokenMeta{
 }
 
 
-func (t *Token) String() string {
+func (t TokenName) String() string {
 
     {{ range .ConstLexemes }}
 
-        if {{.TokenName}} == t.Name {
+        if {{.TokenName}} == t {
             return "{{.TokenName}}"
         }
 
@@ -45,13 +44,13 @@ func (t *Token) String() string {
 
     {{ range .VarLexemes }}
 
-        if {{.TokenName}} == t.Name {
-            return fmt.Sprintf("%s(%s)", "{{.TokenName}}", t.Value)
+        if {{.TokenName}} == t {
+            return "{{.TokenName}}"
         }
 
     {{ end }}
 
-    if EOF == t.Name {
+    if EOF == t {
             return "EOF"
     }
 

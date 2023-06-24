@@ -123,6 +123,46 @@ func TestLexer(t *testing.T) {
 				Str:    "sinx",
 			},
 		},
+		{
+			name:  "correct corner case",
+			input: "x-ln))",
+			toks: []Token{
+				{
+					TokenMeta: tokenNamesToTokenMeta[Variable],
+					Value:     "x",
+					Row:       1,
+					Column:    1,
+				},
+				{
+					TokenMeta: tokenNamesToTokenMeta[Minus],
+					Value:     "-",
+					Row:       1,
+					Column:    2,
+				},
+				{
+					TokenMeta: tokenNamesToTokenMeta[Ln],
+					Value:     "ln",
+					Row:       1,
+					Column:    3,
+				},
+				{
+					TokenMeta: tokenNamesToTokenMeta[RParen],
+					Value:     ")",
+					Row:       1,
+					Column:    5,
+				},
+				{
+					TokenMeta: tokenNamesToTokenMeta[RParen],
+					Value:     ")",
+					Row:       1,
+					Column:    6,
+				},
+				{
+					TokenMeta: TokenMeta{ClassNone, EOF},
+				},
+			},
+			err: nil,
+		},
 	}
 
 	for _, test := range testCases {
