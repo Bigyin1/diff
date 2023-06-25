@@ -6,21 +6,25 @@ import (
 	"fmt"
 )
 
-func (d *Derivator) derivNodeWalker(n *parser.DerivNode) parser.Node {
+func (d *Derivator) derivNodeWalker(n *parser.DerivNode) parser.ASTNode {
 
 	switch nt := n.Func.(type) {
 	case *parser.BinOpNode:
 		return d.binOpNodeWalker(nt)
 	case *parser.UnOpNode:
 		return d.unOpNodeWalker(nt)
-	case *parser.ValNode:
-		return d.valNodeWalker(nt)
+	case *parser.NumNode:
+		return d.numNodeWalker(nt)
+	case *parser.ConstNode:
+		return d.constNodeWalker(nt)
+	case *parser.VarNode:
+		return d.varNodeWalker(nt)
 	default:
 		panic("unknown node type")
 	}
 }
 
-func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.Node {
+func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
 	switch n.Op {
 	case lexer.Plus, lexer.Minus:
 
@@ -93,7 +97,7 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.Node {
 		square := parser.BinOpNode{
 			Op:    lexer.Pow,
 			Left:  n.Right,
-			Right: &parser.ValNode{Type: lexer.Number, Val: "2"},
+			Right: &parser.NumNode{Val: 2},
 		}
 
 		root := parser.BinOpNode{
@@ -129,7 +133,7 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.Node {
 	}
 }
 
-func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.Node {
+func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 
 	switch n.Op {
 	case lexer.Sin:
@@ -164,7 +168,7 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.Node {
 	case lexer.Ln:
 		div := parser.BinOpNode{
 			Op:    lexer.Div,
-			Left:  &parser.ValNode{Type: lexer.Number, Val: "1"},
+			Left:  &parser.NumNode{Val: 1},
 			Right: n.Expr,
 		}
 
@@ -188,49 +192,47 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.Node {
 
 }
 
-func (d *Derivator) valNodeWalker(n *parser.ValNode) parser.Node {
-
-	switch n.Type {
-	case lexer.Number, lexer.Euler, lexer.Pi:
-
-		return &parser.ValNode{Type: lexer.Number, Val: "0"}
-
-	case lexer.Variable:
-		if d.variable == n.Val {
-			return &parser.ValNode{Type: lexer.Number, Val: "1"}
-		}
-
-		return &parser.ValNode{Type: lexer.Number, Val: "0"}
-
-	default:
-		panic("unimplemented")
-	}
+func (d *Derivator) numNodeWalker(n *parser.NumNode) parser.ASTNode {
+	return &parser.NumNode{Val: 0}
 }
 
-func (d *Derivator) nodeHasVariable(n parser.Node) bool {
+func (d *Derivator) constNodeWalker(n *parser.ConstNode) parser.ASTNode {
+	return &parser.NumNode{Val: 0}
+}
+
+func (d *Derivator) varNodeWalker(n *parser.VarNode) parser.ASTNode {
+
+	if d.variable == n.Val {
+		return &parser.NumNode{Val: 1}
+	}
+
+	return &parser.NumNode{Val: 0}
+}
+
+func (d *Derivator) nodeHasVariable(n parser.ASTNode) bool {
 	switch nt := n.(type) {
 	case *parser.BinOpNode:
 		return d.nodeHasVariable(nt.Left) || d.nodeHasVariable(nt.Right)
 	case *parser.UnOpNode:
 		return d.nodeHasVariable(nt.Expr)
-	case *parser.ValNode:
-		if nt.Type == lexer.Variable && nt.Val == d.variable {
+	case *parser.VarNode:
+		if nt.Val == d.variable {
 			return true
 		}
 		return false
 
 	default:
-		panic("unknown node type")
+		return false
 	}
 
 }
 
-func (d *Derivator) buildBasePowDeriv(n *parser.BinOpNode) parser.Node {
+func (d *Derivator) buildBasePowDeriv(n *parser.BinOpNode) parser.ASTNode {
 
 	newExp := parser.BinOpNode{
 		Op:    lexer.Minus,
 		Left:  n.Right,
-		Right: &parser.ValNode{Type: lexer.Number, Val: "1"},
+		Right: &parser.NumNode{Val: 1},
 	}
 
 	newPow := parser.BinOpNode{
@@ -258,7 +260,7 @@ func (d *Derivator) buildBasePowDeriv(n *parser.BinOpNode) parser.Node {
 	return &root
 }
 
-func (d *Derivator) buildExpPowDeriv(n *parser.BinOpNode) parser.Node {
+func (d *Derivator) buildExpPowDeriv(n *parser.BinOpNode) parser.ASTNode {
 
 	ln := parser.UnOpNode{
 		Op:   lexer.Ln,

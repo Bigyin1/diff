@@ -2,6 +2,7 @@ package parser
 
 import (
 	"diff/lexer"
+	"strconv"
 )
 
 type Parser struct {
@@ -61,7 +62,7 @@ func (p *Parser) eatToken(exp lexer.TokenName) {
 
 }
 
-func (p *Parser) expr() Node {
+func (p *Parser) expr() ASTNode {
 
 	node := p.term()
 
@@ -76,7 +77,7 @@ func (p *Parser) expr() Node {
 	return node
 }
 
-func (p *Parser) term() Node {
+func (p *Parser) term() ASTNode {
 	node := p.pow()
 
 	for p.currTokenHasName(lexer.Mult, lexer.Div) {
@@ -90,7 +91,7 @@ func (p *Parser) term() Node {
 	return node
 }
 
-func (p *Parser) pow() Node {
+func (p *Parser) pow() ASTNode {
 	node := p.factor()
 
 	for p.currTokenHasName(lexer.Pow) {
@@ -104,7 +105,7 @@ func (p *Parser) pow() Node {
 	return node
 }
 
-func (p *Parser) factor() Node {
+func (p *Parser) factor() ASTNode {
 
 	if p.currTokenHasName(lexer.Plus, lexer.Minus) {
 
@@ -120,7 +121,16 @@ func (p *Parser) factor() Node {
 		v := p.getCurrToken()
 		p.eatToken(v.Name)
 
-		return &ValNode{Type: v.Name, Val: v.Value}
+		if v.Class == lexer.ClassConst {
+			return &ConstNode{Val: v.Name}
+		}
+		if v.Class == lexer.ClassNumber {
+
+			num, _ := strconv.ParseFloat(v.Value, 64)
+			return &NumNode{Val: num}
+		}
+
+		return &VarNode{Val: v.Value}
 	}
 
 	if p.currTokenHasName(lexer.LParen) {
@@ -155,7 +165,7 @@ func NewParser(toks []lexer.Token) *Parser {
 	}
 }
 
-func (p *Parser) Run() (Node, error) {
+func (p *Parser) Run() (ASTNode, error) {
 
 	return &DerivNode{Func: p.expr()}, p.err
 }

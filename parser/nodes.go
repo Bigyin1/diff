@@ -5,15 +5,17 @@ import (
 	"fmt"
 )
 
-type Node interface {
+type NodeType = lexer.TokenName
+
+type ASTNode interface {
 	String() string
 }
 
 type BinOpNode struct {
-	Op lexer.TokenName
+	Op NodeType
 
-	Left  Node
-	Right Node
+	Left  ASTNode
+	Right ASTNode
 }
 
 func (n *BinOpNode) String() string {
@@ -26,9 +28,9 @@ func (n *BinOpNode) String() string {
 }
 
 type UnOpNode struct {
-	Op lexer.TokenName
+	Op NodeType
 
-	Expr Node
+	Expr ASTNode
 }
 
 func (n *UnOpNode) String() string {
@@ -41,18 +43,35 @@ func (n *UnOpNode) String() string {
 
 }
 
-type ValNode struct {
-	Type lexer.TokenName
-	Val  string
+type NumNode struct {
+	Val float64
 }
 
-func (n *ValNode) String() string {
+func (n *NumNode) String() string {
 
-	return fmt.Sprintf("%s(%s)", n.Type.String(), n.Val)
+	return fmt.Sprintf("%.2f", n.Val)
+}
+
+type ConstNode struct {
+	Val NodeType
+}
+
+func (n *ConstNode) String() string {
+
+	return n.Val.String()
+}
+
+type VarNode struct {
+	Val string
+}
+
+func (n *VarNode) String() string {
+
+	return n.Val
 }
 
 type DerivNode struct {
-	Func Node
+	Func ASTNode
 }
 
 func (n *DerivNode) String() string {
