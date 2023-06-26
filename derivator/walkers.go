@@ -125,7 +125,7 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
 		if isExpHasVar {
 			return simplifyExpr(d.buildExpPowDeriv(n))
 		}
-		panic("unimplemented")
+		return &parser.NumNode{Val: 0}
 
 	default:
 		panic("unimplemented")

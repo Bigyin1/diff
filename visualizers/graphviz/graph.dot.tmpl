@@ -1,0 +1,14 @@
+digraph expr {
+  fontname="Helvetica,Arial,sans-serif"
+  node [fontname="Helvetica,Arial,sans-serif"]
+  edge [fontname="Helvetica,Arial,sans-serif"]
+  node [shape=box];
+  
+
+    {{ range .Nodes }}{{template "node" .}}
+    {{ end }}
+
+    {{ range .Verts }}{{template "vert" .}}
+    {{ end }}
+  
+}
