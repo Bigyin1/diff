@@ -26,13 +26,13 @@ type gvCtx struct {
 }
 
 func (c *gvCtx) addNode(ID, Val string) string {
-	// for _, n := range c.Nodes {
-	// 	if n.ID == ID {
-	// 		ID = n.ID + fmt.Sprintf("%d", c.deduplicateNum)
-	// 		c.deduplicateNum += 1
-	// 		break
-	// 	}
-	// }
+	for _, n := range c.Nodes {
+		if n.ID == ID {
+			ID = n.ID + fmt.Sprintf("%d", c.deduplicateNum)
+			c.deduplicateNum += 1
+			break
+		}
+	}
 	c.Nodes = append(c.Nodes, gvNode{ID: ID, Value: Val})
 	return ID
 }

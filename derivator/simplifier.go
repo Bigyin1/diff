@@ -29,7 +29,7 @@ func (d *Derivator) simlifyPureNumNode(n *parser.BinOpNode, l, r *parser.NumNode
 
 	case lexer.Div:
 		if r.Val == 0 {
-			fmt.Println("error: division by zero")
+			fmt.Println("warning: division by zero")
 			return n
 		}
 		return d.m.NewNumNode(arithmOp(l.Val, r.Val, n.Op))
@@ -103,7 +103,7 @@ func (d *Derivator) simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
 			return d.m.NewNumNode(0)
 		}
 		if hasNumValR && r.Val == 0 {
-			fmt.Println("error: division by zero")
+			fmt.Println("warning: division by zero")
 		}
 		if hasNumValR && r.Val == 1 {
 			return n.Left

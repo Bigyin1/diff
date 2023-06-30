@@ -195,6 +195,27 @@ func NewVarNode(val string, m NodesMap) ASTNode {
 	return m.GetOrCreateNode(&node)
 }
 
+// DerivNode is an auxillary type for latex visualiser only
+type DerivNode struct {
+	Expr ASTNode
+}
+
+func (n *DerivNode) String() string {
+	return ""
+}
+
+func (n *DerivNode) Signature() string {
+	return ""
+}
+
+func (n *DerivNode) Addr() string {
+	return ""
+}
+
+func (n *DerivNode) GetProps() *NodeProps {
+	return nil
+}
+
 type NodesMap map[string]ASTNode
 
 func NewNodesMap() NodesMap {

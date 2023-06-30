@@ -27,7 +27,7 @@ func collectTokClasses(ctx *lexGenCtx) {
 		classSet[v.TokenClass] = struct{}{}
 	}
 
-	for k, _ := range classSet {
+	for k := range classSet {
 		ctx.TokClasses = append(ctx.TokClasses, k)
 	}
 }

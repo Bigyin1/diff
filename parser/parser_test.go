@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: tests )))
 func TestParser(t *testing.T) {
 	input := "sin(ln(x)^ (x*cos(x^(3/pi) * e)))"
 	l := lexer.NewLexer(input)

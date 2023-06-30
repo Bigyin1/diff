@@ -13,31 +13,39 @@ import (
 var header string
 
 type LatexVisualiser struct {
-	file *strings.Builder
+	text *strings.Builder
+	out  os.File
 }
 
-func NewLatexVisualiser() *LatexVisualiser {
+func NewLatexVisualiser(Out string) (*LatexVisualiser, error) {
+
+	out, err := os.Create(Out)
+	if err != nil {
+		return nil, err
+	}
 
 	var file strings.Builder
 
 	file.WriteString(header)
 
 	return &LatexVisualiser{
-		file: &file,
-	}
+		text: &file,
+		out:  *out,
+	}, nil
 }
 
 func (lv *LatexVisualiser) BeginDoc() {
-	lv.file.WriteString("\n\\begin{document}\n")
+	lv.text.WriteString("\n\\begin{document}\n")
 }
 
-func (lv *LatexVisualiser) EndDoc() {
-	lv.file.WriteString("\n\\end{document}\n")
+func (lv *LatexVisualiser) EndDoc() error {
+	lv.text.WriteString("\n\\end{document}\n")
 
-	f, _ := os.Create("out.tex")
-	defer f.Close()
+	defer lv.out.Close()
 
-	_, _ = f.WriteString(lv.file.String())
+	_, err := lv.out.WriteString(lv.text.String())
+
+	return err
 }
 
 func (lv *LatexVisualiser) walkBinOpNode(n *parser.BinOpNode) string {
@@ -55,6 +63,13 @@ func (lv *LatexVisualiser) walkBinOpNode(n *parser.BinOpNode) string {
 		res.WriteString(fmt.Sprintf("%s - %s", dL, dR))
 
 	case lexer.Mult:
+		switch nt := n.Right.(type) {
+		case *parser.BinOpNode:
+			if nt.Op == lexer.Plus || nt.Op == lexer.Minus {
+				res.WriteString(fmt.Sprintf("%s \\cdot (%s)", dL, dR))
+				return res.String()
+			}
+		}
 		res.WriteString(fmt.Sprintf("%s \\cdot %s", dL, dR))
 
 	case lexer.Div:
@@ -122,6 +137,14 @@ func (lv *LatexVisualiser) walkVarNode(n *parser.VarNode) string {
 	return res.String()
 }
 
+func (lv *LatexVisualiser) walkDerivNode(n *parser.DerivNode) string {
+	res := strings.Builder{}
+
+	res.WriteString(fmt.Sprintf("(%s)'", lv.walkNode(n.Expr)))
+
+	return res.String()
+}
+
 func (lv *LatexVisualiser) walkNode(n parser.ASTNode) string {
 	switch nt := n.(type) {
 	case *parser.BinOpNode:
@@ -139,16 +162,31 @@ func (lv *LatexVisualiser) walkNode(n parser.ASTNode) string {
 	case *parser.VarNode:
 		return lv.walkVarNode(nt)
 
+	case *parser.DerivNode:
+		return lv.walkDerivNode(nt)
+
 	default:
 		panic("unknown node type")
 	}
 }
 
+func (lv *LatexVisualiser) BeginEq() {
+	lv.text.WriteString("\n\\begin{dmath}\n")
+}
+
+func (lv *LatexVisualiser) EndEq() {
+	lv.text.WriteString("\n\\end{dmath}\n")
+}
+
+func (lv *LatexVisualiser) GenEqu() {
+	lv.text.WriteString(" = ")
+}
+
+func (lv *LatexVisualiser) GenStr(str string) {
+	lv.text.WriteString(str)
+}
+
 func (lv *LatexVisualiser) GenTexForNode(root parser.ASTNode) {
 
-	lv.file.WriteString("\n\\begin{math}\n")
-
-	lv.file.WriteString(lv.walkNode(root))
-
-	lv.file.WriteString("\n\\end{math}\n")
+	lv.text.WriteString(lv.walkNode(root))
 }

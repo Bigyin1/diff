@@ -37,7 +37,14 @@ func (d *Derivator) derivNode(n parser.ASTNode) parser.ASTNode {
 		panic("unknown node type")
 	}
 
+	d.lv.BeginEq()
+	d.lv.GenTexForNode(&parser.DerivNode{Expr: n})
+	d.lv.GenEqu()
+
 	props.Computed = d.simplifyExpr(der)
+
+	d.lv.GenTexForNode(props.Computed)
+	d.lv.EndEq()
 
 	log.Printf("ended deriving %s  got: %s",
 		n, n.GetProps().Computed)
