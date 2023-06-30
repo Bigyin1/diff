@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 )
 
@@ -18,6 +19,7 @@ func main() {
 	gv := flag.Bool("gv", false, "generate graphviz derivative graph")
 	flag.Parse()
 
+	log.SetOutput(io.Discard)
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Println(err)
