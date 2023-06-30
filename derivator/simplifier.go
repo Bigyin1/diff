@@ -22,42 +22,48 @@ func arithmOp(l, r float64, op lexer.TokenName) float64 {
 	}
 }
 
+func (d *Derivator) simlifyPureNumNode(n *parser.BinOpNode, l, r *parser.NumNode) parser.ASTNode {
+	switch n.Op {
+	case lexer.Plus, lexer.Minus, lexer.Mult:
+		return d.m.NewNumNode(arithmOp(l.Val, r.Val, n.Op))
+
+	case lexer.Div:
+		if r.Val == 0 {
+			fmt.Println("error: division by zero")
+			return n
+		}
+		return d.m.NewNumNode(arithmOp(l.Val, r.Val, n.Op))
+	case lexer.Pow:
+		if l.Val == 0 {
+			if r.Val == 0 {
+				return d.m.NewNumNode(1)
+			}
+			return d.m.NewNumNode(0)
+		}
+		if r.Val == 0 {
+			return d.m.NewNumNode(1)
+		}
+		return n
+	}
+
+	return n
+}
+
 func (d *Derivator) simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
+
+	delete(d.m, n.String())
 
 	n.Left = d.simplifyExpr(n.Left)
 	n.Right = d.simplifyExpr(n.Right)
 
+	n = d.m.GetOrCreateNode(n).(*parser.BinOpNode)
+
 	l, hasNumValL := n.Left.(*parser.NumNode)
 	r, hasNumValR := n.Right.(*parser.NumNode)
 
-	if !hasNumValL && !hasNumValR {
-		return n
-	}
-
 	if hasNumValL && hasNumValR {
 
-		switch n.Op {
-		case lexer.Plus, lexer.Minus, lexer.Mult:
-			return d.m.NewNumNode(arithmOp(l.Val, r.Val, n.Op))
-
-		case lexer.Div:
-			if r.Val == 0 {
-				fmt.Println("error: division by zero")
-				return n
-			}
-			return d.m.NewNumNode(arithmOp(l.Val, r.Val, n.Op))
-		case lexer.Pow:
-			if l.Val == 0 {
-				if r.Val == 0 {
-					return d.m.NewNumNode(1)
-				}
-				return d.m.NewNumNode(0)
-			}
-			if r.Val == 0 {
-				return d.m.NewNumNode(1)
-			}
-			return n
-		}
+		return d.simlifyPureNumNode(n, l, r)
 	}
 
 	switch n.Op {
@@ -124,16 +130,24 @@ func (d *Derivator) simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
 
 func (d *Derivator) simplifyUnOpNode(n *parser.UnOpNode) parser.ASTNode {
 
+	delete(d.m, n.String())
+
 	n.Expr = d.simplifyExpr(n.Expr)
+
+	n = d.m.GetOrCreateNode(n).(*parser.UnOpNode)
 
 	switch n.Op {
 	case lexer.Plus:
 		return n.Expr
 
 	case lexer.Minus:
-		ch, ok := n.Expr.(*parser.UnOpNode)
-		if ok && ch.Op == lexer.Minus {
-			return ch.Expr
+		switch ch := n.Expr.(type) {
+		case *parser.UnOpNode:
+			if ch.Op == lexer.Minus {
+				return ch.Expr
+			}
+		case *parser.NumNode:
+			return d.m.NewNumNode(-ch.Val)
 		}
 
 	case lexer.Ln:
