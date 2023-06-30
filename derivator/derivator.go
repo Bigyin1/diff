@@ -2,30 +2,40 @@ package derivator
 
 import (
 	"diff/parser"
-	"fmt"
+	"diff/visualizers/latex"
 )
 
 type Derivator struct {
 	root     parser.ASTNode
+	m        parser.NodesMap
 	variable string
+
+	lv *latex.LatexVisualiser
 }
 
-func NewDerivator(root parser.ASTNode, Var string) *Derivator {
+func NewDerivator(root parser.ASTNode, m parser.NodesMap, Var string) *Derivator {
 	return &Derivator{
 		root:     root,
 		variable: Var,
+		m:        m,
+
+		lv: latex.NewLatexVisualiser(),
 	}
 }
 
 func (d *Derivator) Run() parser.ASTNode {
 
-	d.root = simplifyExpr(d.root)
-	fmt.Println(d.root)
+	d.lv.BeginDoc()
+	d.lv.GenTexForNode(d.root)
 
-	r, ok := d.root.(*parser.DerivNode)
-	if !ok {
-		return d.root
-	}
+	d.root = d.simplifyExpr(d.root)
 
-	return d.derivNodeWalker(r)
+	d.lv.GenTexForNode(d.root)
+
+	res := d.derivNode(d.root)
+
+	d.lv.GenTexForNode(res)
+	d.lv.EndDoc()
+
+	return res
 }

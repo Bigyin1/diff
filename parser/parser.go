@@ -9,6 +9,8 @@ type Parser struct {
 	tokens       []lexer.Token
 	currTokenIdx uint
 
+	m NodesMap
+
 	err error
 }
 
@@ -71,13 +73,18 @@ func (p *Parser) expr() ASTNode {
 
 		p.eatToken(op.Name)
 
-		node = &BinOpNode{Op: op.Name, Left: node, Right: p.term()}
+		node = p.m.NewBinOpNode(
+			op.Name,
+			node,
+			p.term(),
+		)
 	}
 
 	return node
 }
 
 func (p *Parser) term() ASTNode {
+
 	node := p.pow()
 
 	for p.currTokenHasName(lexer.Mult, lexer.Div) {
@@ -85,7 +92,11 @@ func (p *Parser) term() ASTNode {
 
 		p.eatToken(op.Name)
 
-		node = &BinOpNode{Op: op.Name, Left: node, Right: p.pow()}
+		node = p.m.NewBinOpNode(
+			op.Name,
+			node,
+			p.pow(),
+		)
 	}
 
 	return node
@@ -99,7 +110,11 @@ func (p *Parser) pow() ASTNode {
 
 		p.eatToken(op.Name)
 
-		node = &BinOpNode{Op: op.Name, Left: node, Right: p.factor()}
+		node = p.m.NewBinOpNode(
+			op.Name,
+			node,
+			p.factor(),
+		)
 	}
 
 	return node
@@ -108,11 +123,15 @@ func (p *Parser) pow() ASTNode {
 func (p *Parser) factor() ASTNode {
 
 	if p.currTokenHasName(lexer.Plus, lexer.Minus) {
-
 		op := p.getCurrToken()
+
 		p.eatToken(op.Name)
 
-		return &UnOpNode{Op: op.Name, Expr: p.factor()}
+		node := p.m.NewUnOpNode(
+			op.Name,
+			p.factor(),
+		)
+		return node
 	}
 
 	if p.currTokenHasClass(lexer.ClassConst,
@@ -122,15 +141,14 @@ func (p *Parser) factor() ASTNode {
 		p.eatToken(v.Name)
 
 		if v.Class == lexer.ClassConst {
-			return &ConstNode{Val: v.Name}
+			return p.m.NewConstNode(v.Name)
 		}
 		if v.Class == lexer.ClassNumber {
-
 			num, _ := strconv.ParseFloat(v.Value, 64)
-			return &NumNode{Val: num}
+			return p.m.NewNumNode(num)
 		}
 
-		return &VarNode{Val: v.Value}
+		return NewVarNode(v.Value, p.m)
 	}
 
 	if p.currTokenHasName(lexer.LParen) {
@@ -148,7 +166,10 @@ func (p *Parser) factor() ASTNode {
 		p.eatToken(fn.Name)
 		p.eatToken(lexer.LParen)
 
-		node := &UnOpNode{Op: fn.Name, Expr: p.expr()}
+		node := p.m.NewUnOpNode(
+			fn.Name,
+			p.expr(),
+		)
 
 		p.eatToken(lexer.RParen)
 		return node
@@ -160,12 +181,14 @@ func (p *Parser) factor() ASTNode {
 }
 
 func NewParser(toks []lexer.Token) *Parser {
+
 	return &Parser{
 		tokens: toks,
+		m:      NewNodesMap(),
 	}
 }
 
-func (p *Parser) Run() (ASTNode, error) {
+func (p *Parser) Run() (ASTNode, NodesMap, error) {
 
-	return &DerivNode{Func: p.expr()}, p.err
+	return p.expr(), p.m, p.err
 }

@@ -19,7 +19,7 @@ func TestParser(t *testing.T) {
 	}
 
 	p := NewParser(toks)
-	root, err := p.Run()
+	root, _, err := p.Run()
 	if err != nil {
 		t.Error(err)
 		return
@@ -39,7 +39,7 @@ func TestParserErrors(t *testing.T) {
 	}
 
 	p := NewParser(toks)
-	root, err := p.Run()
+	root, _, err := p.Run()
 
 	assert.Error(t, err)
 	fmt.Print(root.String())

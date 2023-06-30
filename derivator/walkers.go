@@ -3,129 +3,132 @@ package derivator
 import (
 	"diff/lexer"
 	"diff/parser"
-	"fmt"
+	"log"
 )
 
-func (d *Derivator) derivNodeWalker(n *parser.DerivNode) parser.ASTNode {
+func (d *Derivator) derivNode(n parser.ASTNode) parser.ASTNode {
 
-	switch nt := n.Func.(type) {
+	log.Printf("started deriving %s", n)
+
+	props := n.GetProps()
+
+	if props.Computed != nil {
+		log.Printf("ended deriving %s  got: %s (cached)",
+			n, n.GetProps().Computed)
+		return props.Computed
+	}
+
+	// TODO: possible to implement unused node deletition(but, I suppose, not in Go)
+
+	var der parser.ASTNode
+
+	switch nt := n.(type) {
 	case *parser.BinOpNode:
-		return d.binOpNodeWalker(nt)
+		der = d.binOpNodeWalker(nt)
 	case *parser.UnOpNode:
-		return d.unOpNodeWalker(nt)
+		der = d.unOpNodeWalker(nt)
 	case *parser.NumNode:
-		return d.numNodeWalker(nt)
+		der = d.numNodeWalker(nt)
 	case *parser.ConstNode:
-		return d.constNodeWalker(nt)
+		der = d.constNodeWalker(nt)
 	case *parser.VarNode:
-		return d.varNodeWalker(nt)
+		der = d.varNodeWalker(nt)
 	default:
 		panic("unknown node type")
 	}
+
+	props.Computed = d.simplifyExpr(der)
+
+	log.Printf("ended deriving %s  got: %s",
+		n, n.GetProps().Computed)
+
+	return props.Computed
 }
 
 func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
+
 	switch n.Op {
 	case lexer.Plus, lexer.Minus:
 
-		derL := parser.DerivNode{Func: n.Left}
-		derR := parser.DerivNode{Func: n.Right}
+		derL := d.derivNode(n.Left)
+		derR := d.derivNode(n.Right)
 
-		root := parser.BinOpNode{
-			Op:    n.Op,
-			Left:  &derL,
-			Right: &derR,
-		}
-
-		fmt.Println(root.String())
-
-		root.Left = d.derivNodeWalker(&derL)
-		root.Right = d.derivNodeWalker(&derR)
-
-		return simplifyExpr(&root)
+		return d.m.NewBinOpNode(
+			n.Op,
+			derL,
+			derR,
+		)
 
 	case lexer.Mult:
-		derL := parser.DerivNode{Func: n.Left}
-		derR := parser.DerivNode{Func: n.Right}
+		derL := d.derivNode(n.Left)
+		derR := d.derivNode(n.Right)
 
-		root := parser.BinOpNode{
-			Op: lexer.Plus,
-		}
+		multL := d.m.NewBinOpNode(
+			lexer.Mult,
+			derL,
+			n.Right,
+		)
 
-		multL := parser.BinOpNode{
-			Op:    lexer.Mult,
-			Left:  &derL,
-			Right: n.Right,
-		}
-		multR := parser.BinOpNode{
-			Op:    lexer.Mult,
-			Left:  &derR,
-			Right: n.Left,
-		}
+		multR := d.m.NewBinOpNode(
+			lexer.Mult,
+			derR,
+			n.Left,
+		)
 
-		root.Left = &multL
-		root.Right = &multR
+		return d.m.NewBinOpNode(
+			lexer.Plus,
+			multL,
+			multR,
+		)
 
-		fmt.Println(root.String())
-
-		multL.Left = d.derivNodeWalker(&derL)
-		multR.Left = d.derivNodeWalker(&derR)
-
-		return simplifyExpr(&root)
 	case lexer.Div:
-		derL := parser.DerivNode{Func: n.Left}
-		derR := parser.DerivNode{Func: n.Right}
+		derL := d.derivNode(n.Left)
+		derR := d.derivNode(n.Right)
 
-		minus := parser.BinOpNode{
-			Op: lexer.Minus,
-		}
+		multL := d.m.NewBinOpNode(
+			lexer.Mult,
+			derL,
+			n.Right,
+		)
 
-		multL := parser.BinOpNode{
-			Op:    lexer.Mult,
-			Left:  &derL,
-			Right: n.Right,
-		}
-		multR := parser.BinOpNode{
-			Op:    lexer.Mult,
-			Left:  &derR,
-			Right: n.Left,
-		}
+		multR := d.m.NewBinOpNode(
+			lexer.Mult,
+			derR,
+			n.Left,
+		)
 
-		minus.Left = &multL
-		minus.Right = &multR
+		minus := d.m.NewBinOpNode(
+			lexer.Minus,
+			multL,
+			multR,
+		)
 
-		square := parser.BinOpNode{
-			Op:    lexer.Pow,
-			Left:  n.Right,
-			Right: &parser.NumNode{Val: 2},
-		}
+		square := d.m.NewBinOpNode(
+			lexer.Pow,
+			n.Right,
+			d.m.NewNumNode(2),
+		)
 
-		root := parser.BinOpNode{
-			Op:    lexer.Div,
-			Left:  &minus,
-			Right: &square,
-		}
-
-		fmt.Println(root.String())
-
-		multL.Left = d.derivNodeWalker(&derL)
-		multR.Left = d.derivNodeWalker(&derR)
-
-		return simplifyExpr(&root)
+		return d.m.NewBinOpNode(
+			lexer.Div,
+			minus,
+			square,
+		)
 
 	case lexer.Pow:
 		isBaseHasVar := d.nodeHasVariable(n.Left)
 		isExpHasVar := d.nodeHasVariable(n.Right)
+
 		if isBaseHasVar && isExpHasVar {
 			panic("unimplemented")
 		}
 		if isBaseHasVar {
-			return simplifyExpr(d.buildBasePowDeriv(n))
+			return d.buildBasePowDeriv(n)
 		}
 		if isExpHasVar {
-			return simplifyExpr(d.buildExpPowDeriv(n))
+			return d.buildExpPowDeriv(n)
 		}
-		return &parser.NumNode{Val: 0}
+		return d.m.NewNumNode(0)
 
 	default:
 		panic("unimplemented")
@@ -137,55 +140,52 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 
 	switch n.Op {
 	case lexer.Sin:
-		f := parser.UnOpNode{Op: lexer.Cos, Expr: n.Expr}
+		f := d.m.NewUnOpNode(lexer.Cos, n.Expr)
 
-		der := &parser.DerivNode{Func: n.Expr}
-		root := parser.BinOpNode{
-			Op:   lexer.Mult,
-			Left: &f, Right: der}
+		der := d.derivNode(n.Expr)
 
-		fmt.Println(root.String())
-
-		root.Right = d.derivNodeWalker(der)
-		return simplifyExpr(&root)
+		return d.m.NewBinOpNode(
+			lexer.Mult,
+			f,
+			der,
+		)
 
 	case lexer.Cos:
-		f := parser.UnOpNode{Op: lexer.Sin, Expr: n.Expr}
-		m := parser.UnOpNode{Op: lexer.Minus, Expr: &f}
+		f := d.m.NewUnOpNode(lexer.Sin, n.Expr)
+		m := d.m.NewUnOpNode(lexer.Minus, f)
 
-		der := &parser.DerivNode{Func: n.Expr}
-		root := parser.BinOpNode{
-			Op:   lexer.Mult,
-			Left: &m, Right: der,
-		}
+		der := d.derivNode(n.Expr)
 
-		fmt.Println(root.String())
-
-		root.Right = d.derivNodeWalker(der)
-
-		return simplifyExpr(&root)
+		return d.m.NewBinOpNode(
+			lexer.Mult,
+			m,
+			der,
+		)
 
 	case lexer.Ln:
-		div := parser.BinOpNode{
-			Op:    lexer.Div,
-			Left:  &parser.NumNode{Val: 1},
-			Right: n.Expr,
-		}
 
-		der := &parser.DerivNode{Func: n.Expr}
-		root := parser.BinOpNode{
-			Op:   lexer.Mult,
-			Left: &div, Right: der}
+		div := d.m.NewBinOpNode(
+			lexer.Div,
+			d.m.NewNumNode(1),
+			n.Expr,
+		)
 
-		fmt.Println(root.String())
+		der := d.derivNode(n.Expr)
 
-		root.Right = d.derivNodeWalker(der)
-		return simplifyExpr(&root)
+		return d.m.NewBinOpNode(
+			lexer.Mult,
+			div,
+			der,
+		)
 
 	case lexer.Minus:
-		der := &parser.DerivNode{Func: n.Expr}
-		n.Expr = d.derivNodeWalker(der)
-		return simplifyExpr(n)
+
+		der := d.derivNode(n.Expr)
+
+		return d.m.NewUnOpNode(
+			lexer.Minus,
+			der,
+		)
 	}
 
 	return n
@@ -193,28 +193,29 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 }
 
 func (d *Derivator) numNodeWalker(n *parser.NumNode) parser.ASTNode {
-	return &parser.NumNode{Val: 0}
+	return d.m.NewNumNode(0)
 }
 
 func (d *Derivator) constNodeWalker(n *parser.ConstNode) parser.ASTNode {
-	return &parser.NumNode{Val: 0}
+	return d.m.NewNumNode(0)
 }
 
 func (d *Derivator) varNodeWalker(n *parser.VarNode) parser.ASTNode {
 
 	if d.variable == n.Val {
-		return &parser.NumNode{Val: 1}
+		return d.m.NewNumNode(1)
 	}
-
-	return &parser.NumNode{Val: 0}
+	return d.m.NewNumNode(0)
 }
 
 func (d *Derivator) nodeHasVariable(n parser.ASTNode) bool {
 	switch nt := n.(type) {
 	case *parser.BinOpNode:
 		return d.nodeHasVariable(nt.Left) || d.nodeHasVariable(nt.Right)
+
 	case *parser.UnOpNode:
 		return d.nodeHasVariable(nt.Expr)
+
 	case *parser.VarNode:
 		if nt.Val == d.variable {
 			return true
@@ -224,64 +225,55 @@ func (d *Derivator) nodeHasVariable(n parser.ASTNode) bool {
 	default:
 		return false
 	}
-
 }
 
 func (d *Derivator) buildBasePowDeriv(n *parser.BinOpNode) parser.ASTNode {
 
-	newExp := parser.BinOpNode{
-		Op:    lexer.Minus,
-		Left:  n.Right,
-		Right: &parser.NumNode{Val: 1},
-	}
+	newExp := d.m.NewBinOpNode(
+		lexer.Minus,
+		n.Right,
+		d.m.NewNumNode(1),
+	)
 
-	newPow := parser.BinOpNode{
-		Op:    lexer.Pow,
-		Left:  n.Left,
-		Right: &newExp,
-	}
+	newPow := d.m.NewBinOpNode(
+		lexer.Pow,
+		n.Left,
+		newExp,
+	)
 
-	derFunc := parser.BinOpNode{
-		Op:    lexer.Mult,
-		Left:  n.Right,
-		Right: &newPow,
-	}
+	derFunc := d.m.NewBinOpNode(
+		lexer.Mult,
+		n.Right,
+		newPow,
+	)
 
-	der := parser.DerivNode{Func: n.Left}
-	root := parser.BinOpNode{
-		Op:    lexer.Mult,
-		Left:  &derFunc,
-		Right: &der,
-	}
+	der := d.derivNode(n.Left)
 
-	fmt.Println(root.String())
-
-	root.Right = d.derivNodeWalker(&der)
-	return &root
+	return d.m.NewBinOpNode(
+		lexer.Mult,
+		derFunc,
+		der,
+	)
 }
 
 func (d *Derivator) buildExpPowDeriv(n *parser.BinOpNode) parser.ASTNode {
 
-	ln := parser.UnOpNode{
-		Op:   lexer.Ln,
-		Expr: n.Left,
-	}
+	ln := d.m.NewUnOpNode(
+		lexer.Ln,
+		n.Left,
+	)
 
-	derFunc := parser.BinOpNode{
-		Op:    lexer.Mult,
-		Left:  n,
-		Right: &ln,
-	}
+	derFunc := d.m.NewBinOpNode(
+		lexer.Mult,
+		n,
+		ln,
+	)
 
-	der := parser.DerivNode{Func: n.Right}
-	root := parser.BinOpNode{
-		Op:    lexer.Mult,
-		Left:  &derFunc,
-		Right: &der,
-	}
+	der := d.derivNode(n.Right)
 
-	fmt.Println(root.String())
-
-	root.Right = d.derivNodeWalker(&der)
-	return &root
+	return d.m.NewBinOpNode(
+		lexer.Mult,
+		derFunc,
+		der,
+	)
 }

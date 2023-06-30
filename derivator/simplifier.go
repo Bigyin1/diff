@@ -4,6 +4,7 @@ import (
 	"diff/lexer"
 	"diff/parser"
 	"fmt"
+	"log"
 )
 
 func arithmOp(l, r float64, op lexer.TokenName) float64 {
@@ -21,10 +22,10 @@ func arithmOp(l, r float64, op lexer.TokenName) float64 {
 	}
 }
 
-func simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
+func (d *Derivator) simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
 
-	n.Left = simplifyExpr(n.Left)
-	n.Right = simplifyExpr(n.Right)
+	n.Left = d.simplifyExpr(n.Left)
+	n.Right = d.simplifyExpr(n.Right)
 
 	l, hasNumValL := n.Left.(*parser.NumNode)
 	r, hasNumValR := n.Right.(*parser.NumNode)
@@ -37,105 +38,83 @@ func simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
 
 		switch n.Op {
 		case lexer.Plus, lexer.Minus, lexer.Mult:
-			root := parser.NumNode{
-				Val: arithmOp(l.Val, r.Val, n.Op),
-			}
-			return &root
+			return d.m.NewNumNode(arithmOp(l.Val, r.Val, n.Op))
+
 		case lexer.Div:
 			if r.Val == 0 {
 				fmt.Println("error: division by zero")
 				return n
 			}
-			root := parser.NumNode{
-				Val: arithmOp(l.Val, r.Val, n.Op),
-			}
-			return &root
+			return d.m.NewNumNode(arithmOp(l.Val, r.Val, n.Op))
 		case lexer.Pow:
 			if l.Val == 0 {
 				if r.Val == 0 {
-					return &parser.NumNode{Val: 1}
+					return d.m.NewNumNode(1)
 				}
-				return &parser.NumNode{Val: 0}
+				return d.m.NewNumNode(0)
 			}
 			if r.Val == 0 {
-				return &parser.NumNode{Val: 1}
+				return d.m.NewNumNode(1)
 			}
 			return n
 		}
 	}
-	if hasNumValL {
 
-		switch n.Op {
-		case lexer.Plus:
-			if l.Val == 0 {
-				return n.Right
-			}
-			return n
-		case lexer.Minus:
-			if l.Val == 0 {
-				root := parser.UnOpNode{
-					Op:   lexer.Minus,
-					Expr: n.Right,
-				}
-				return &root
-			}
-			return n
-		case lexer.Mult:
-			if l.Val == 0 {
-				return &parser.NumNode{Val: 0}
-			}
-			if l.Val == 1 {
-				return n.Right
-			}
-			return n
-		case lexer.Div:
-			if l.Val == 0 {
-				return &parser.NumNode{Val: 0}
-			}
-			return n
-		case lexer.Pow:
-			if l.Val == 0 {
-				return &parser.NumNode{Val: 0}
-			}
-			if l.Val == 1 {
-				return &parser.NumNode{Val: 1}
-			}
+	switch n.Op {
+	case lexer.Plus:
+		if hasNumValL && l.Val == 0 {
+			return n.Right
 		}
-	}
-	if hasNumValR {
 
-		switch n.Op {
-		case lexer.Plus:
-			if r.Val == 0 {
-				return n.Left
-			}
-			return n
-		case lexer.Minus:
-			if r.Val == 0 {
-				return n.Left
-			}
-			return n
-		case lexer.Mult:
-			if r.Val == 0 {
-				return &parser.NumNode{Val: 0}
-			}
-			if r.Val == 1 {
-				return n.Left
-			}
-			return n
-		case lexer.Div:
-			if r.Val == 0 {
-				fmt.Println("error: division by zero")
-			}
-			return n
-		case lexer.Pow:
-			if r.Val == 0 {
-				return &parser.NumNode{Val: 1}
-			}
-			if r.Val == 1 {
-				return n.Left
-			}
-			return n
+		if hasNumValR && r.Val == 0 {
+			return n.Left
+		}
+
+	case lexer.Minus:
+		if hasNumValL && l.Val == 0 {
+			return d.m.NewUnOpNode(lexer.Minus, n.Right)
+		}
+		if hasNumValR && r.Val == 0 {
+			return n.Left
+		}
+
+	case lexer.Mult:
+		if hasNumValL && l.Val == 0 {
+			return d.m.NewNumNode(0)
+		}
+		if hasNumValL && l.Val == 1 {
+			return n.Right
+		}
+		if hasNumValR && r.Val == 0 {
+			return d.m.NewNumNode(0)
+		}
+		if hasNumValR && r.Val == 1 {
+			return n.Left
+		}
+
+	case lexer.Div:
+		if hasNumValL && l.Val == 0 {
+			return d.m.NewNumNode(0)
+		}
+		if hasNumValR && r.Val == 0 {
+			fmt.Println("error: division by zero")
+		}
+		if hasNumValR && r.Val == 1 {
+			return n.Left
+		}
+
+	case lexer.Pow:
+		if hasNumValL && l.Val == 0 {
+			return d.m.NewNumNode(0)
+		}
+		if hasNumValL && l.Val == 1 {
+			return d.m.NewNumNode(1)
+		}
+		if hasNumValR && r.Val == 0 {
+			return d.m.NewNumNode(1)
+		}
+		if hasNumValR && r.Val == 1 {
+			return n.Left
 		}
 	}
 
@@ -143,20 +122,67 @@ func simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
 
 }
 
-func simplifyExpr(n parser.ASTNode) parser.ASTNode {
+func (d *Derivator) simplifyUnOpNode(n *parser.UnOpNode) parser.ASTNode {
+
+	n.Expr = d.simplifyExpr(n.Expr)
+
+	switch n.Op {
+	case lexer.Plus:
+		return n.Expr
+
+	case lexer.Minus:
+		ch, ok := n.Expr.(*parser.UnOpNode)
+		if ok && ch.Op == lexer.Minus {
+			return ch.Expr
+		}
+
+	case lexer.Ln:
+		switch ch := n.Expr.(type) {
+		case *parser.ConstNode:
+			if ch.Val == lexer.Euler {
+				return d.m.NewNumNode(1)
+			}
+		case *parser.NumNode:
+			if ch.Val == 1 {
+				return d.m.NewNumNode(0)
+			}
+		}
+	}
+
+	return n
+}
+
+func (d *Derivator) simplifyExpr(n parser.ASTNode) parser.ASTNode {
+
+	log.Printf("started simplifying %s", n)
+
+	if n.GetProps().Simplified != nil {
+		log.Printf("ended simplifying %s  got: %s (cached)",
+			n, n.GetProps().Simplified)
+		return n.GetProps().Simplified
+	}
+
+	var smpl parser.ASTNode
 
 	switch nt := n.(type) {
 	case *parser.BinOpNode:
-		return simplifyBinOpNode(nt)
+		smpl = d.simplifyBinOpNode(nt)
+
 	case *parser.UnOpNode:
-		nt.Expr = simplifyExpr(nt.Expr)
-		return nt
-	case *parser.DerivNode:
-		nt.Func = simplifyExpr(nt.Func)
-		return nt
+		smpl = d.simplifyUnOpNode(nt)
+
 	case *parser.VarNode, *parser.NumNode, *parser.ConstNode:
-		return nt
+		smpl = nt
+
 	default:
 		panic("unknown node type")
 	}
+
+	n.GetProps().Simplified = smpl
+	smpl.GetProps().Simplified = smpl
+
+	log.Printf("ended simplifying %s  got: %s",
+		n, smpl)
+
+	return smpl
 }
