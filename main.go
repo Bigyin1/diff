@@ -20,6 +20,7 @@ func main() {
 	flag.Parse()
 
 	log.SetOutput(io.Discard)
+
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Println(err)
@@ -52,20 +53,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *gv {
-		gvData := graphviz.GenGraphViz(gr)
-		file, err := os.Create("derivGraph.dot")
-		defer file.Close()
-
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		_, err = file.Write(gvData)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	if !*gv {
+		return
 	}
+
+	gvData := graphviz.GenGraphViz(gr)
+	file, err := os.Create("derivGraph.dot")
+	defer file.Close()
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	_, err = file.Write(gvData)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 }

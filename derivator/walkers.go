@@ -127,7 +127,7 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
 		isExpHasVar := d.nodeHasVariable(n.Right)
 
 		if isBaseHasVar && isExpHasVar {
-			panic("unimplemented")
+			return d.buildMixedPowDeriv(n)
 		}
 		if isBaseHasVar {
 			return d.buildBasePowDeriv(n)
@@ -166,6 +166,27 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 		return d.m.NewBinOpNode(
 			lexer.Mult,
 			m,
+			der,
+		)
+
+	case lexer.Tg:
+		f := d.m.NewUnOpNode(lexer.Cos, n.Expr)
+		pow := d.m.NewBinOpNode(
+			lexer.Pow,
+			f,
+			d.m.NewNumNode(2),
+		)
+		div := d.m.NewBinOpNode(
+			lexer.Div,
+			d.m.NewNumNode(1),
+			pow,
+		)
+
+		der := d.derivNode(n.Expr)
+
+		return d.m.NewBinOpNode(
+			lexer.Mult,
+			div,
 			der,
 		)
 
@@ -232,6 +253,23 @@ func (d *Derivator) nodeHasVariable(n parser.ASTNode) bool {
 	default:
 		return false
 	}
+}
+
+func (d *Derivator) buildMixedPowDeriv(n *parser.BinOpNode) parser.ASTNode {
+	ln := d.m.NewUnOpNode(lexer.Ln, n.Left)
+	mult := d.m.NewBinOpNode(
+		lexer.Mult,
+		ln,
+		n.Right,
+	)
+
+	der := d.derivNode(mult)
+
+	return d.m.NewBinOpNode(
+		lexer.Mult,
+		n,
+		der,
+	)
 }
 
 func (d *Derivator) buildBasePowDeriv(n *parser.BinOpNode) parser.ASTNode {

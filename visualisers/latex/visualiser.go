@@ -101,8 +101,14 @@ func (lv *LatexVisualiser) walkUnOpNode(n *parser.UnOpNode) string {
 	case lexer.Cos:
 		res.WriteString(fmt.Sprintf("\\cos(%s)", dE))
 
+	case lexer.Tg:
+		res.WriteString(fmt.Sprintf("\\tg(%s)", dE))
+
 	case lexer.Ln:
 		res.WriteString(fmt.Sprintf("\\ln(%s)", dE))
+
+	default:
+		panic("unimplemented")
 	}
 
 	return res.String()

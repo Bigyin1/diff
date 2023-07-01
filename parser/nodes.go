@@ -18,6 +18,7 @@ type ASTNode interface {
 type NodeProps struct {
 	Computed   ASTNode
 	Simplified ASTNode
+	// RefCount   uint TODO: unused node deletition
 }
 
 type BinOpNode struct {

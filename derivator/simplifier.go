@@ -104,6 +104,7 @@ func (d *Derivator) simplifyBinOpNode(n *parser.BinOpNode) parser.ASTNode {
 		}
 		if hasNumValR && r.Val == 0 {
 			fmt.Println("warning: division by zero")
+			return n
 		}
 		if hasNumValR && r.Val == 1 {
 			return n.Left

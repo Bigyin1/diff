@@ -190,5 +190,9 @@ func NewParser(toks []lexer.Token) *Parser {
 
 func (p *Parser) Run() (ASTNode, NodesMap, error) {
 
-	return p.expr(), p.m, p.err
+	res := p.expr()
+
+	p.eatToken(lexer.EOF)
+
+	return res, p.m, p.err
 }

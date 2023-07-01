@@ -30,7 +30,7 @@ func TestParser(t *testing.T) {
 }
 
 func TestParserErrors(t *testing.T) {
-	input := "x^"
+	input := "tg(x)"
 	l := lexer.NewLexer(input)
 
 	toks, err := l.Run()

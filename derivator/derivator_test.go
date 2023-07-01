@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TODO: tests )))
 
 func TestDerivator(t *testing.T) {
-	input := "sin(1 / (x*cos(x^(3/pi) * ln(x^2)))) "
+	input := "x^(x^y * tg(x*cos(1/x^2))) / (5 *ln(x) * y) "
 	l := lexer.NewLexer(input)
 
 	toks, err := l.Run()
@@ -37,8 +39,11 @@ func TestDerivator(t *testing.T) {
 	}
 	file.Close()
 
-	d, _ := NewDerivator(root, m, "x", "out.tex")
-	nr, _ := d.Run()
+	d, err := NewDerivator(root, m, "x", "out.tex")
+	assert.NoError(t, err)
+
+	nr, err := d.Run()
+	assert.NoError(t, err)
 
 	gv = graphviz.GenGraphViz(nr)
 	file, _ = os.Create("derivExpr.dot")
