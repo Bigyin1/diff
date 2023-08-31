@@ -20,28 +20,13 @@ func (d *Derivator) derivNode(n parser.ASTNode) parser.ASTNode {
 
 	// TODO: possible to implement unused node deletition(but, I suppose, not in Go)
 
-	var der parser.ASTNode
-
-	switch nt := n.(type) {
-	case *parser.BinOpNode:
-		der = d.binOpNodeWalker(nt)
-	case *parser.UnOpNode:
-		der = d.unOpNodeWalker(nt)
-	case *parser.NumNode:
-		der = d.numNodeWalker(nt)
-	case *parser.ConstNode:
-		der = d.constNodeWalker(nt)
-	case *parser.VarNode:
-		der = d.varNodeWalker(nt)
-	default:
-		panic("unknown node type")
-	}
+	n.Visit(d)
 
 	d.lv.BeginEq()
 	d.lv.GenTexForNode(&parser.DerivNode{Expr: n})
 	d.lv.GenEqu()
 
-	props.Computed = d.simplifyExpr(der)
+	props.Computed = d.simplifyExpr(d.visitorResNode)
 
 	d.lv.GenTexForNode(props.Computed)
 	d.lv.EndEq()
@@ -52,7 +37,7 @@ func (d *Derivator) derivNode(n parser.ASTNode) parser.ASTNode {
 	return props.Computed
 }
 
-func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
+func (d *Derivator) VisitBinOp(n *parser.BinOpNode) {
 
 	switch n.Op {
 	case lexer.Plus, lexer.Minus:
@@ -60,11 +45,12 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
 		derL := d.derivNode(n.Left)
 		derR := d.derivNode(n.Right)
 
-		return d.m.NewBinOpNode(
+		d.visitorResNode = d.m.NewBinOpNode(
 			n.Op,
 			derL,
 			derR,
 		)
+		return
 
 	case lexer.Mult:
 		derL := d.derivNode(n.Left)
@@ -82,11 +68,12 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
 			n.Left,
 		)
 
-		return d.m.NewBinOpNode(
+		d.visitorResNode = d.m.NewBinOpNode(
 			lexer.Plus,
 			multL,
 			multR,
 		)
+		return
 
 	case lexer.Div:
 		derL := d.derivNode(n.Left)
@@ -116,26 +103,26 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
 			d.m.NewNumNode(2),
 		)
 
-		return d.m.NewBinOpNode(
+		d.visitorResNode = d.m.NewBinOpNode(
 			lexer.Div,
 			minus,
 			square,
 		)
+		return
 
 	case lexer.Pow:
 		isBaseHasVar := d.nodeHasVariable(n.Left)
 		isExpHasVar := d.nodeHasVariable(n.Right)
 
 		if isBaseHasVar && isExpHasVar {
-			return d.buildMixedPowDeriv(n)
+			d.visitorResNode = d.buildMixedPowDeriv(n)
+		} else if isBaseHasVar {
+			d.visitorResNode = d.buildBasePowDeriv(n)
+		} else if isExpHasVar {
+			d.visitorResNode = d.buildExpPowDeriv(n)
+		} else {
+			d.visitorResNode = d.m.NewNumNode(0)
 		}
-		if isBaseHasVar {
-			return d.buildBasePowDeriv(n)
-		}
-		if isExpHasVar {
-			return d.buildExpPowDeriv(n)
-		}
-		return d.m.NewNumNode(0)
 
 	default:
 		panic("unimplemented")
@@ -143,7 +130,7 @@ func (d *Derivator) binOpNodeWalker(n *parser.BinOpNode) parser.ASTNode {
 	}
 }
 
-func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
+func (d *Derivator) VisitUnOpNode(n *parser.UnOpNode) {
 
 	switch n.Op {
 	case lexer.Sin:
@@ -151,11 +138,12 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 
 		der := d.derivNode(n.Expr)
 
-		return d.m.NewBinOpNode(
+		d.visitorResNode = d.m.NewBinOpNode(
 			lexer.Mult,
 			f,
 			der,
 		)
+		return
 
 	case lexer.Cos:
 		f := d.m.NewUnOpNode(lexer.Sin, n.Expr)
@@ -163,11 +151,12 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 
 		der := d.derivNode(n.Expr)
 
-		return d.m.NewBinOpNode(
+		d.visitorResNode = d.m.NewBinOpNode(
 			lexer.Mult,
 			m,
 			der,
 		)
+		return
 
 	case lexer.Tg:
 		f := d.m.NewUnOpNode(lexer.Cos, n.Expr)
@@ -184,11 +173,12 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 
 		der := d.derivNode(n.Expr)
 
-		return d.m.NewBinOpNode(
+		d.visitorResNode = d.m.NewBinOpNode(
 			lexer.Mult,
 			div,
 			der,
 		)
+		return
 
 	case lexer.Ln:
 
@@ -200,40 +190,48 @@ func (d *Derivator) unOpNodeWalker(n *parser.UnOpNode) parser.ASTNode {
 
 		der := d.derivNode(n.Expr)
 
-		return d.m.NewBinOpNode(
+		d.visitorResNode = d.m.NewBinOpNode(
 			lexer.Mult,
 			div,
 			der,
 		)
+		return
 
 	case lexer.Minus:
 
 		der := d.derivNode(n.Expr)
 
-		return d.m.NewUnOpNode(
+		d.visitorResNode = d.m.NewUnOpNode(
 			lexer.Minus,
 			der,
 		)
+		return
+
+	default:
+		panic("inimplemented")
 	}
 
-	return n
-
 }
 
-func (d *Derivator) numNodeWalker(n *parser.NumNode) parser.ASTNode {
-	return d.m.NewNumNode(0)
+func (d *Derivator) VisitNumNode(n *parser.NumNode) {
+	d.visitorResNode = d.m.NewNumNode(0)
 }
 
-func (d *Derivator) constNodeWalker(n *parser.ConstNode) parser.ASTNode {
-	return d.m.NewNumNode(0)
+func (d *Derivator) VisitConstNode(n *parser.ConstNode) {
+	d.visitorResNode = d.m.NewNumNode(0)
 }
 
-func (d *Derivator) varNodeWalker(n *parser.VarNode) parser.ASTNode {
+func (d *Derivator) VisitVarNode(n *parser.VarNode) {
 
 	if d.variable == n.Val {
-		return d.m.NewNumNode(1)
+		d.visitorResNode = d.m.NewNumNode(1)
+	} else {
+		d.visitorResNode = d.m.NewNumNode(0)
 	}
-	return d.m.NewNumNode(0)
+}
+
+func (d *Derivator) VisitDerivNode(*parser.DerivNode) {
+
 }
 
 func (d *Derivator) nodeHasVariable(n parser.ASTNode) bool {

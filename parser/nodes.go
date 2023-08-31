@@ -6,6 +6,15 @@ import (
 	"log"
 )
 
+type NodeVisiter interface {
+	VisitBinOp(n *BinOpNode)
+	VisitUnOpNode(n *UnOpNode)
+	VisitNumNode(n *NumNode)
+	VisitConstNode(n *ConstNode)
+	VisitVarNode(n *VarNode)
+	VisitDerivNode(n *DerivNode)
+}
+
 type NodeType = lexer.TokenName
 
 type ASTNode interface {
@@ -13,6 +22,7 @@ type ASTNode interface {
 	Signature() string
 	Addr() string
 	GetProps() *NodeProps
+	Visit(NodeVisiter)
 }
 
 type NodeProps struct {
@@ -28,6 +38,10 @@ type BinOpNode struct {
 
 	Left  ASTNode
 	Right ASTNode
+}
+
+func (n *BinOpNode) Visit(nv NodeVisiter) {
+	nv.VisitBinOp(n)
 }
 
 func (n *BinOpNode) String() string {
@@ -73,6 +87,10 @@ type UnOpNode struct {
 	Expr ASTNode
 }
 
+func (n *UnOpNode) Visit(nv NodeVisiter) {
+	nv.VisitUnOpNode(n)
+}
+
 func (n *UnOpNode) String() string {
 	if n.Expr == nil {
 		return ""
@@ -110,6 +128,10 @@ type NumNode struct {
 	Val float64
 }
 
+func (n *NumNode) Visit(nv NodeVisiter) {
+	nv.VisitNumNode(n)
+}
+
 func (n *NumNode) String() string {
 	return fmt.Sprintf("%g", n.Val)
 }
@@ -138,6 +160,10 @@ type ConstNode struct {
 	NodeProps
 
 	Val NodeType
+}
+
+func (n *ConstNode) Visit(nv NodeVisiter) {
+	nv.VisitConstNode(n)
 }
 
 func (n *ConstNode) String() string {
@@ -171,6 +197,10 @@ type VarNode struct {
 	Val string
 }
 
+func (n *VarNode) Visit(nv NodeVisiter) {
+	nv.VisitVarNode(n)
+}
+
 func (n *VarNode) String() string {
 
 	return n.Val
@@ -199,6 +229,10 @@ func NewVarNode(val string, m NodesMap) ASTNode {
 // DerivNode is an auxillary type for latex visualiser only
 type DerivNode struct {
 	Expr ASTNode
+}
+
+func (n *DerivNode) Visit(nv NodeVisiter) {
+	nv.VisitDerivNode(n)
 }
 
 func (n *DerivNode) String() string {

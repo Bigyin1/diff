@@ -11,6 +11,8 @@ type Derivator struct {
 	variable string
 
 	lv *latex.LatexVisualiser
+
+	visitorResNode parser.ASTNode
 }
 
 func NewDerivator(root parser.ASTNode, m parser.NodesMap, Var, Out string) (*Derivator, error) {
