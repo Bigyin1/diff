@@ -14,7 +14,7 @@ import (
 // TODO: tests )))
 
 func TestDerivator(t *testing.T) {
-	input := "x^(x^y * tg(x*cos(1/x^2))) / (5 *ln(x) * y) "
+	input := "x^(x^y * tg(cos(ln(x^x)/x^2))) / (ln(x^x) * x^y) "
 	l := lexer.NewLexer(input)
 
 	toks, err := l.Run()
